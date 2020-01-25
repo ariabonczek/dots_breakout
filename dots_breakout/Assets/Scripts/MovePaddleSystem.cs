@@ -14,7 +14,8 @@ public class MovePaddleSystem : JobComponentSystem
         public float MoveDirection;
         public float DeltaTime;
         
-        public void Execute(ref Translation translation,
+        public void Execute(
+            ref Translation translation,
             [ReadOnly] ref MovementSpeed speed)
         {
             var position = translation.Value;

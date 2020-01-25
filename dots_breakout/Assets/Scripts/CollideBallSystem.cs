@@ -5,18 +5,18 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
-struct CollisionEvent
-{
-    public Entity BallEntity;
-    public Entity CollidedEntity;
-}
-
+[AlwaysUpdateSystem]
 [UpdateAfter(typeof(MoveBallSystem))]
 public class CollideBallSystem : JobComponentSystem
 {
+    private EndSimulationEntityCommandBufferSystem m_EndSimECBSystem;
+
+    private EntityQuery m_BrickQuery;
+    
     [BurstCompile]
-    struct BounceBallOffPaddleJob : IJobForEach<RectangleBounds, MovementSpeed, Translation, BallVelocity>
+    struct BounceBallsOffPaddleJob : IJobForEach<RectangleBounds, MovementSpeed, Translation, BallVelocity>
     {
         public float DeltaTime;
         public Entity PaddleEntity;
@@ -27,7 +27,7 @@ public class CollideBallSystem : JobComponentSystem
         
         [ReadOnly] 
         public ComponentDataFromEntity<RectangleBounds> PaddleBounds;
-        
+
         public void Execute(
             [ReadOnly]ref RectangleBounds ballBounds, 
             [ReadOnly]ref MovementSpeed speed,
@@ -39,16 +39,97 @@ public class CollideBallSystem : JobComponentSystem
             var paddleRect = PaddleBounds[PaddleEntity];
 
             var velocity = ballVelocity.Velocity;
-            
-            // if a collision is detected...
-            if (ballPosition.x - ballBounds.HalfWidthHeight.x < paddlePosition.x + paddleRect.HalfWidthHeight.x &&
-                ballPosition.x + ballBounds.HalfWidthHeight.x > paddlePosition.x - paddleRect.HalfWidthHeight.x &&
-                ballPosition.y - ballBounds.HalfWidthHeight.y < paddlePosition.y + paddleRect.HalfWidthHeight.y &&
-                ballPosition.y + ballBounds.HalfWidthHeight.y > paddlePosition.y - paddleRect.HalfWidthHeight.y)
+            var delta =  paddlePosition.xy - ballPosition.xy;
+            var combinedHalfBounds = ballBounds.HalfWidthHeight + paddleRect.HalfWidthHeight;
+
+            if (math.all(math.abs(delta) <= combinedHalfBounds))
             {
-                ballTranslation.Value.xy -= velocity * speed.Speed * DeltaTime;
-                ballVelocity.Velocity = -velocity;
+                velocity = math.normalize(new float2(math.sign(-delta.x), -velocity.y));
+
+                ballPosition.y += combinedHalfBounds.y + delta.y;
+                
+                ballVelocity.Velocity = velocity;
+                ballTranslation.Value = ballPosition;
             }
+        }
+    }
+    
+    [BurstCompile]
+    struct CollideBallsWithBricksJob : IJobForEachWithEntity<RectangleBounds, MovementSpeed, Translation, BallVelocity>
+    {
+        public float DeltaTime;
+
+        public EntityCommandBuffer.Concurrent Ecb;
+
+        [ReadOnly] 
+        [DeallocateOnJobCompletion]
+        public NativeArray<ArchetypeChunk> BrickChunks;
+        
+        [ReadOnly] public ArchetypeChunkEntityType BrickEntityRO;
+        [NativeDisableContainerSafetyRestriction][ReadOnly] public ArchetypeChunkComponentType<Translation> BrickTranslationRO;
+        [NativeDisableContainerSafetyRestriction][ReadOnly] public ArchetypeChunkComponentType<RectangleBounds> BrickRectangleBoundsRO;
+
+        public void Execute(
+            Entity e,
+            int ballIndex,
+            [ReadOnly]ref RectangleBounds ballBounds, 
+            [ReadOnly]ref MovementSpeed speed,
+            [ReadOnly]ref Translation ballTranslation,
+            ref BallVelocity ballVelocity)
+        {
+            var ballPosition = ballTranslation.Value;
+            var velocity = ballVelocity.Velocity;
+
+            var invertX = false;
+            var invertY = false;
+
+            for (int chunkIndex = 0; chunkIndex < BrickChunks.Length; ++chunkIndex)
+            {
+                var chunk = BrickChunks[chunkIndex];
+                var entityArray = chunk.GetNativeArray(BrickEntityRO);
+                var translationArray = chunk.GetNativeArray(BrickTranslationRO);
+                var boundsArray = chunk.GetNativeArray(BrickRectangleBoundsRO);
+
+                for (int brickIndex = 0; brickIndex < entityArray.Length; ++brickIndex)
+                {
+                    var brickPosition = translationArray[brickIndex].Value;
+                    var brickRect = boundsArray[brickIndex];
+
+                    var delta = brickPosition.xy - ballPosition.xy;
+                    var combinedHalfBounds = ballBounds.HalfWidthHeight + brickRect.HalfWidthHeight;
+
+                    if (math.all(math.abs(delta) <= combinedHalfBounds))
+                    {
+                        var crossWidth = combinedHalfBounds.x * delta.y;
+                        var crossHeight = combinedHalfBounds.y * delta.x;
+                        
+                        if(crossWidth > crossHeight)
+                        {
+                            if (crossWidth > -crossHeight)
+                                invertY = true;
+                            else
+                                invertX = true;
+                        }
+                        else
+                        {
+                            if (crossWidth > -crossHeight)
+                                invertX = true;
+                            else
+                                invertY = true;
+                        }
+                        
+                        Ecb.DestroyEntity(ballIndex, entityArray[brickIndex]);
+                    }
+                }
+            }
+
+            if (invertY)
+                velocity.y = -velocity.y;
+            
+            if (invertX)
+                velocity.x = -velocity.x;
+
+            ballVelocity.Velocity = velocity;
         }
     }
 
@@ -56,7 +137,7 @@ public class CollideBallSystem : JobComponentSystem
     {
         var paddleEntity = GetSingletonEntity<PaddleTag>();
         
-        var paddleJob = new BounceBallOffPaddleJob
+        var paddleJob = new BounceBallsOffPaddleJob
         {
             DeltaTime = Time.DeltaTime,
             PaddleEntity = paddleEntity,
@@ -65,7 +146,32 @@ public class CollideBallSystem : JobComponentSystem
             PaddleBounds = GetComponentDataFromEntity<RectangleBounds>(true)
         };
         var paddleJobHandle = paddleJob.Schedule(this, inputDependencies);
+
+        var brickChunks = m_BrickQuery.CreateArchetypeChunkArray(Allocator.TempJob, out var brickChunksHandle);
+        var brickJob = new CollideBallsWithBricksJob
+        {
+            DeltaTime = Time.DeltaTime,
+            Ecb = m_EndSimECBSystem.CreateCommandBuffer().ToConcurrent(),
+            
+            BrickChunks = brickChunks,
+            
+            BrickEntityRO = GetArchetypeChunkEntityType(),
+            BrickTranslationRO = GetArchetypeChunkComponentType<Translation>(true),
+            BrickRectangleBoundsRO = GetArchetypeChunkComponentType<RectangleBounds>(true)
+        };
+        var brickJobHandle = brickJob.Schedule(this, JobHandle.CombineDependencies(brickChunksHandle, paddleJobHandle));
+        m_EndSimECBSystem.AddJobHandleForProducer(brickJobHandle);
         
-        return paddleJob.Schedule(this, paddleJobHandle);
+        return brickJobHandle;
+    }
+
+    protected override void OnCreate()
+    {
+        m_EndSimECBSystem = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+
+        m_BrickQuery = GetEntityQuery(new EntityQueryDesc
+        {
+            All = new []{ ComponentType.ReadOnly<Translation>(), ComponentType.ReadOnly<RectangleBounds>(), ComponentType.ReadOnly<BrickScore>() }
+        });
     }
 }

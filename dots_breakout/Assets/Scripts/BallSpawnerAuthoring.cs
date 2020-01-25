@@ -19,8 +19,7 @@ public class BallSpawnerAuthoring : MonoBehaviour, IConvertGameObjectToEntity, I
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
-        var spawnerEntity = dstManager.CreateEntity(typeof(BallSpawner));
-        dstManager.SetComponentData(spawnerEntity, new BallSpawner
+        dstManager.AddComponentData(entity, new BallSpawner
         {
             BallPrefab = conversionSystem.GetPrimaryEntity(BallPrefab),
             SpawnPosition = new float2(transform.position.x, transform.position.y),

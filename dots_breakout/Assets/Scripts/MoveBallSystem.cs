@@ -21,7 +21,7 @@ public class MoveBallSystem : JobComponentSystem
             [ReadOnly] ref RectangleBounds ballBounds)
         {
             var position = ballTranslation.Value;
-            position.xy += ballVelocity.Velocity * ballSpeed.Speed * math.min(0.333f,DeltaTime);
+            position.xy += ballVelocity.Velocity * ballSpeed.Speed * math.min(0.0333f,DeltaTime);
             
             if (position.x - ballBounds.HalfWidthHeight.x < ScreenBounds.XYMin.x || position.x + ballBounds.HalfWidthHeight.x > ScreenBounds.XYMax.x)
                 ballVelocity.Velocity.x = -ballVelocity.Velocity.x;
