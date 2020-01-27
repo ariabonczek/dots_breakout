@@ -10,7 +10,12 @@
         <e p="Scripts" t="Include">
           <e p="BallAuthoring.cs" t="Include" />
           <e p="BallSpawnerAuthoring.cs" t="Include" />
+          <e p="BallSpawnSystem.cs" t="Include" />
+          <e p="BrickAuthoring.cs" t="Include" />
+          <e p="BrickSpawnerAuthoring.cs" t="Include" />
+          <e p="BrickSpawnSystem.cs" t="Include" />
           <e p="CollideBallSystem.cs" t="Include" />
+          <e p="CollisionUtility.cs" t="Include" />
           <e p="InitScreenBoundsSystem.cs" t="Include" />
           <e p="MoveBallSystem.cs" t="Include" />
           <e p="MovementSpeed.cs" t="Include" />
