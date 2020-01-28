@@ -7,16 +7,12 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using static Unity.Mathematics.math;
 
-struct BrickHashGrid : ISystemStateComponentData
+struct BrickHashGrid : IComponentData
 {
     public UnsafeMultiHashMap<int, Entity> Grid;
     public float GridCellSize;
     public float ScreenWidthInCells;
 }
-
-// Used for querying for the grid during destruction
-struct BrickHashGridTag : IComponentData
-{}
 
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 [UpdateAfter(typeof(InitScreenBoundsSystem))]
@@ -61,7 +57,7 @@ public class InitBrickHashGridSystem : JobComponentSystem
         if (brickCount == 0)
             return inputDependencies;
         
-        World.EntityManager.CreateEntity(typeof(BrickHashGrid), typeof(BrickHashGridTag));
+        World.EntityManager.CreateEntity(typeof(BrickHashGrid));
 
         var screenBounds = GetSingleton<ScreenBoundsData>();
         var gridCellSize = 2.5f;
@@ -94,21 +90,5 @@ public class InitBrickHashGridSystem : JobComponentSystem
         {
             All = new []{ ComponentType.ReadOnly<Position2D>(), ComponentType.ReadOnly<RectangleBounds>(), ComponentType.ReadOnly<BrickScore>() }
         });
-    }
-}
-
-[UpdateInGroup(typeof(InitializationSystemGroup))]
-public class DestroyBrickHashGridSystem : JobComponentSystem
-{
-    protected override JobHandle OnUpdate(JobHandle inputDependencies)
-    {
-        Entities
-            .WithNone<BrickHashGridTag>()
-            .ForEach((ref BrickHashGrid grid) =>
-            {
-                grid.Grid.Dispose();
-            }).Run();
-
-        return inputDependencies;
     }
 }

@@ -16,6 +16,8 @@
           <e p="BrickSpawnSystem.cs" t="Include" />
           <e p="CollideBallSystem.cs" t="Include" />
           <e p="CollisionUtility.cs" t="Include" />
+          <e p="Copy2DPositionToLocalToWorldSystem.cs" t="Include" />
+          <e p="InitBrickHashGridSystem.cs" t="Include" />
           <e p="InitScreenBoundsSystem.cs" t="Include" />
           <e p="MoveBallSystem.cs" t="Include" />
           <e p="MovementSpeed.cs" t="Include" />
