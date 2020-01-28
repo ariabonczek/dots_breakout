@@ -5,7 +5,6 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 
 [AlwaysUpdateSystem]
 [UpdateAfter(typeof(MoveBallSystem))]
@@ -52,47 +51,14 @@ public class CollideBallSystem : JobComponentSystem
             }
         }
     }
-    
-    [BurstCompile]
-    [RequireComponentTag(typeof(BrickScore))]
-    struct HashBrickPositionsJob : IJobForEachWithEntity<Translation, RectangleBounds>
-    {
-        public NativeMultiHashMap<int, Entity>.ParallelWriter BrickHashMap;
-        public float GridCellSize;
-        public float ScreenWidthInCells;
 
-        private void HashAndInsert(float2 brickCornerPosition, Entity e)
-        {
-            var hash = (int) ((math.floor(brickCornerPosition.x / GridCellSize)) +
-                              (math.floor(brickCornerPosition.y / GridCellSize)) * ScreenWidthInCells);
-            BrickHashMap.Add(hash, e);
-        }
-        
-        public void Execute(
-            Entity e,
-            int index,
-            [ReadOnly]ref Translation brickPosition, 
-            [ReadOnly]ref RectangleBounds brickBounds)
-        {
-            var brickCenter = brickPosition.Value.xy;
-            HashAndInsert(brickCenter + brickBounds.HalfWidthHeight, e);
-            HashAndInsert(brickCenter - brickBounds.HalfWidthHeight, e);
-            
-            HashAndInsert(brickCenter + brickBounds.HalfWidthHeight * new float2(-1.0f,  1.0f), e);
-            HashAndInsert(brickCenter + brickBounds.HalfWidthHeight * new float2( 1.0f, -1.0f), e);
-        }
-    }
-    
     [BurstCompile]
     struct CollideBallsWithBricksJob_Accelerated : IJobForEachWithEntity<RectangleBounds, MovementSpeed, Translation, BallVelocity>
     {
         public EntityCommandBuffer.Concurrent Ecb;
 
-        [ReadOnly] 
-        public NativeMultiHashMap<int, Entity> BrickHashMap;
-        public float GridCellSize;
-        public float ScreenWidthInCells;
-        
+        [ReadOnly] public BrickHashGrid BrickGrid;
+
         [ReadOnly] public ComponentDataFromEntity<Translation> BrickTranslationRO;
         [ReadOnly] public ComponentDataFromEntity<RectangleBounds> BrickRectangleBoundsRO;
 
@@ -110,12 +76,13 @@ public class CollideBallSystem : JobComponentSystem
             var invertX = false;
             var invertY = false;
 
-            var hashBallPosition = (int) ((math.floor(ballPosition.x / GridCellSize)) +
-                                          (math.floor(ballPosition.y / GridCellSize)) * ScreenWidthInCells);
-            var bricksInCell = BrickHashMap.GetValuesForKey(hashBallPosition);
+            var hashBallPosition = (int) ((math.floor(ballPosition.x / BrickGrid.GridCellSize)) +
+                                          (math.floor(ballPosition.y / BrickGrid.GridCellSize)) * BrickGrid.ScreenWidthInCells);
+            var bricksInCell = BrickGrid.Grid.GetValuesForKey(hashBallPosition);
             while (bricksInCell.MoveNext())
             {
                 var brickEntity = bricksInCell.Current;
+                
                 // todo: remove bricks from hashmap when they are destroyed
                 if(!BrickTranslationRO.Exists(brickEntity))
                     continue;
@@ -172,35 +139,19 @@ public class CollideBallSystem : JobComponentSystem
         var brickCount = m_BrickQuery.CalculateEntityCount();
         if (brickCount > 0)
         {
-            var screenBounds = GetSingleton<ScreenBoundsData>();
-            var gridCellSize = 2.5f;
-            var screenWidthHeight = math.abs(screenBounds.XYMax - screenBounds.XYMin);
-            var screenWidthInCells = (int) math.ceil(screenWidthHeight.x / gridCellSize);
-       
-            var brickHashMap = new NativeMultiHashMap<int, Entity>(brickCount * 4, Allocator.TempJob);
-            var hashBricksJob = new HashBrickPositionsJob
-            {
-                BrickHashMap = brickHashMap.AsParallelWriter(),
-                GridCellSize = gridCellSize,
-                ScreenWidthInCells = screenWidthInCells
-            };
-            var hashBricksHandle = hashBricksJob.Schedule(this, paddleHandle);
-            
+            var hashGrid = GetSingleton<BrickHashGrid>();
             var brickJob = new CollideBallsWithBricksJob_Accelerated
             {
                 Ecb = m_EndSimECBSystem.CreateCommandBuffer().ToConcurrent(),
                 
-                BrickHashMap = brickHashMap,
-                GridCellSize = gridCellSize,
-                ScreenWidthInCells = screenWidthInCells,
+                BrickGrid = hashGrid,
 
                 BrickTranslationRO = GetComponentDataFromEntity<Translation>(true),
                 BrickRectangleBoundsRO = GetComponentDataFromEntity<RectangleBounds>(true)
             };
             
-            collideBrickHandle = brickJob.Schedule(this, hashBricksHandle);
+            collideBrickHandle = brickJob.Schedule(this, paddleHandle);
             m_EndSimECBSystem.AddJobHandleForProducer(collideBrickHandle);
-            collideBrickHandle = brickHashMap.Dispose(collideBrickHandle);
         }
 
         return collideBrickHandle;
