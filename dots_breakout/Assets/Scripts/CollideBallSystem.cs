@@ -15,13 +15,13 @@ public class CollideBallSystem : JobComponentSystem
     private EntityQuery m_BrickQuery;
     
     [BurstCompile]
-    struct BounceBallsOffPaddleJob : IJobForEach<RectangleBounds, MovementSpeed, Translation, BallVelocity>
+    struct BounceBallsOffPaddleJob : IJobForEach<RectangleBounds, MovementSpeed, Position2D, BallVelocity>
     {
         public Entity PaddleEntity;
         
         [ReadOnly]
         [NativeDisableContainerSafetyRestriction] 
-        public ComponentDataFromEntity<Translation> PaddleTranslation;
+        public ComponentDataFromEntity<Position2D> PaddleTranslation;
         
         [ReadOnly] 
         public ComponentDataFromEntity<RectangleBounds> PaddleBounds;
@@ -29,7 +29,7 @@ public class CollideBallSystem : JobComponentSystem
         public void Execute(
             [ReadOnly]ref RectangleBounds ballBounds, 
             [ReadOnly]ref MovementSpeed speed,
-            ref Translation ballTranslation,
+            ref Position2D ballTranslation,
             ref BallVelocity ballVelocity)
         {
             var ballPosition = ballTranslation.Value;
@@ -53,13 +53,13 @@ public class CollideBallSystem : JobComponentSystem
     }
 
     [BurstCompile]
-    struct CollideBallsWithBricksJob_Accelerated : IJobForEachWithEntity<RectangleBounds, MovementSpeed, Translation, BallVelocity>
+    struct CollideBallsWithBricksJob_Accelerated : IJobForEachWithEntity<RectangleBounds, MovementSpeed, Position2D, BallVelocity>
     {
         public EntityCommandBuffer.Concurrent Ecb;
 
         [ReadOnly] public BrickHashGrid BrickGrid;
 
-        [ReadOnly] public ComponentDataFromEntity<Translation> BrickTranslationRO;
+        [ReadOnly] public ComponentDataFromEntity<Position2D> BrickTranslationRO;
         [ReadOnly] public ComponentDataFromEntity<RectangleBounds> BrickRectangleBoundsRO;
 
         public void Execute(
@@ -67,7 +67,7 @@ public class CollideBallSystem : JobComponentSystem
             int ballIndex,
             [ReadOnly]ref RectangleBounds ballBounds, 
             [ReadOnly]ref MovementSpeed speed,
-            [ReadOnly]ref Translation ballTranslation,
+            [ReadOnly]ref Position2D ballTranslation,
             ref BallVelocity ballVelocity)
         {
             var ballPosition = ballTranslation.Value;
@@ -130,7 +130,7 @@ public class CollideBallSystem : JobComponentSystem
         {
             PaddleEntity = paddleEntity,
             
-            PaddleTranslation = GetComponentDataFromEntity<Translation>(true),
+            PaddleTranslation = GetComponentDataFromEntity<Position2D>(true),
             PaddleBounds = GetComponentDataFromEntity<RectangleBounds>(true)
         };
         var paddleHandle = paddleJob.Schedule(this, inputDependencies);
@@ -146,7 +146,7 @@ public class CollideBallSystem : JobComponentSystem
                 
                 BrickGrid = hashGrid,
 
-                BrickTranslationRO = GetComponentDataFromEntity<Translation>(true),
+                BrickTranslationRO = GetComponentDataFromEntity<Position2D>(true),
                 BrickRectangleBoundsRO = GetComponentDataFromEntity<RectangleBounds>(true)
             };
             
@@ -163,7 +163,7 @@ public class CollideBallSystem : JobComponentSystem
 
         m_BrickQuery = GetEntityQuery(new EntityQueryDesc
         {
-            All = new []{ ComponentType.ReadOnly<Translation>(), ComponentType.ReadOnly<RectangleBounds>(), ComponentType.ReadOnly<BrickScore>() }
+            All = new []{ ComponentType.ReadOnly<Position2D>(), ComponentType.ReadOnly<RectangleBounds>(), ComponentType.ReadOnly<BrickScore>() }
         });
     }
 }

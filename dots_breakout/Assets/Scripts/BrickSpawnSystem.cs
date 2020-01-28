@@ -33,7 +33,7 @@ public class BrickSpawnSystem : JobComponentSystem
                     for (int x = 0; x < bricksPerRow; ++x)
                     {
                         var brickIndex = y * bricksPerRow + x;
-                        EntityManager.SetComponentData(bricks[brickIndex], new Translation{Value = new float3(currentX, currentY, 0.0f)});
+                        EntityManager.SetComponentData(bricks[brickIndex], new Position2D{Value = new float2(currentX, currentY)});
                         currentX += brickWidth;
                     }
                     currentY += brickHeight;

@@ -8,14 +8,13 @@ using Unity.Transforms;
 public class MoveBallSystem : JobComponentSystem
 {
     [BurstCompile]
-    struct MoveBallJob : IJobForEach<Translation, BallPreviousPosition, BallVelocity, MovementSpeed, RectangleBounds>
+    struct MoveBallJob : IJobForEach<Position2D, BallVelocity, MovementSpeed, RectangleBounds>
     {
         public float DeltaTime;
         public ScreenBoundsData ScreenBounds;
         
         public void Execute(
-            ref Translation ballTranslation, 
-            ref BallPreviousPosition ballPreviousPosition, 
+            ref Position2D ballTranslation, 
             ref BallVelocity ballVelocity,
             [ReadOnly] ref MovementSpeed ballSpeed,
             [ReadOnly] ref RectangleBounds ballBounds)
@@ -31,7 +30,6 @@ public class MoveBallSystem : JobComponentSystem
             
             position.xy = math.min(math.max(ScreenBounds.XYMin + ballBounds.HalfWidthHeight, position.xy), ScreenBounds.XYMax - ballBounds.HalfWidthHeight);
             
-            ballPreviousPosition.Value = ballTranslation.Value.xy;
             ballTranslation.Value = position;
         }
     }

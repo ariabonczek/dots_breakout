@@ -1,5 +1,6 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 public struct PaddleTag : IComponentData { }
@@ -24,5 +25,12 @@ public class PaddleAuthoring : MonoBehaviour, IConvertGameObjectToEntity
         {
             Speed = MovementSpeed
         });
+        
+        dstManager.AddComponentData<Position2D>(entity, new Position2D
+        {
+            Value = new float2(transform.position.x, transform.position.y)
+        });
+        dstManager.RemoveComponent<Translation>(entity);
+        dstManager.RemoveComponent<Rotation>(entity);
     }
 }

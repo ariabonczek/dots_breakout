@@ -27,7 +27,7 @@ public class InitBrickHashGridSystem : JobComponentSystem
 
     [BurstCompile]
     [RequireComponentTag(typeof(BrickScore))]
-    struct HashBrickPositionsJob : IJobForEachWithEntity<Translation, RectangleBounds>
+    struct HashBrickPositionsJob : IJobForEachWithEntity<Position2D, RectangleBounds>
     {
         public UnsafeMultiHashMap<int, Entity> Grid;
         public float GridCellSize;
@@ -43,7 +43,7 @@ public class InitBrickHashGridSystem : JobComponentSystem
         public void Execute(
             Entity e,
             int index,
-            [ReadOnly]ref Translation brickPosition, 
+            [ReadOnly]ref Position2D brickPosition, 
             [ReadOnly]ref RectangleBounds brickBounds)
         {
             var brickCenter = brickPosition.Value.xy;
@@ -92,7 +92,7 @@ public class InitBrickHashGridSystem : JobComponentSystem
     {
         m_BrickQuery = GetEntityQuery(new EntityQueryDesc
         {
-            All = new []{ ComponentType.ReadOnly<Translation>(), ComponentType.ReadOnly<RectangleBounds>(), ComponentType.ReadOnly<BrickScore>() }
+            All = new []{ ComponentType.ReadOnly<Position2D>(), ComponentType.ReadOnly<RectangleBounds>(), ComponentType.ReadOnly<BrickScore>() }
         });
     }
 }

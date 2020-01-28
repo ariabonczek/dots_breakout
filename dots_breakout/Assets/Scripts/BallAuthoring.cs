@@ -1,5 +1,6 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 public struct RectangleBounds : IComponentData
@@ -10,11 +11,6 @@ public struct RectangleBounds : IComponentData
 public struct BallVelocity : IComponentData
 {
     public float2 Velocity;
-}
-
-public struct BallPreviousPosition : IComponentData
-{
-    public float2 Value;
 }
 
 [DisallowMultipleComponent]
@@ -37,12 +33,11 @@ public class BallAuthoring : MonoBehaviour, IConvertGameObjectToEntity
         {
             Speed = MovementSpeed
         });
-
-        dstManager.AddComponentData(entity, new BallPreviousPosition
-        {
-            Value = new float2(transform.position.x, transform.position.y)
-        });
         
         dstManager.AddComponent<BallVelocity>(entity);
+        
+        dstManager.AddComponent<Position2D>(entity);
+        dstManager.RemoveComponent<Translation>(entity);
+        dstManager.RemoveComponent<Rotation>(entity);
     }
 }

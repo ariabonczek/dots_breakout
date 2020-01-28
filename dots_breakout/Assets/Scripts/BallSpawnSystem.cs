@@ -2,7 +2,6 @@
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Transforms;
 
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 public class BallSpawnSystem : JobComponentSystem
@@ -22,12 +21,7 @@ public class BallSpawnSystem : JobComponentSystem
                         Velocity = random.NextFloat2Direction()
                     });
 
-                    EntityManager.SetComponentData(balls[i], new Translation
-                    {
-                        Value = new float3(spawner.SpawnPosition, 0.0f)
-                    });
-
-                    EntityManager.SetComponentData(balls[i], new BallPreviousPosition
+                    EntityManager.SetComponentData(balls[i], new Position2D()
                     {
                         Value = new float2(spawner.SpawnPosition)
                     });

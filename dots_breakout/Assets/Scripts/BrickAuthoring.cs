@@ -1,10 +1,16 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 struct BrickScore : IComponentData
 {
     public int Value;
+}
+
+struct Position2D : IComponentData
+{
+    public float2 Value;
 }
 
 [DisallowMultipleComponent]
@@ -21,5 +27,9 @@ public class BrickAuthoring : MonoBehaviour, IConvertGameObjectToEntity
         dstManager.AddComponentData(entity, bounds);
 
         dstManager.AddComponent<BrickScore>(entity);
+
+        dstManager.AddComponent<Position2D>(entity);
+        dstManager.RemoveComponent<Translation>(entity);
+        dstManager.RemoveComponent<Rotation>(entity);
     }
 }

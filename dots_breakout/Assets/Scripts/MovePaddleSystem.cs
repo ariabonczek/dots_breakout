@@ -9,13 +9,13 @@ public class MovePaddleSystem : JobComponentSystem
 {
     [BurstCompile]
     [RequireComponentTag(typeof(PaddleTag))]
-    struct MovePaddleJob : IJobForEach<Translation, MovementSpeed>
+    struct MovePaddleJob : IJobForEach<Position2D, MovementSpeed>
     {
         public float MoveDirection;
         public float DeltaTime;
         
         public void Execute(
-            ref Translation translation,
+            ref Position2D translation,
             [ReadOnly] ref MovementSpeed speed)
         {
             var position = translation.Value;
