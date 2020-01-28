@@ -23,7 +23,7 @@ public class BrickSpawnSystem : JobComponentSystem
             var bricksPerRow = (int) math.floor(screenWidth / brickWidth);
             var startX = screenBounds.XYMin.x + (screenWidth - brickWidth * bricksPerRow) / 2.0f + brickBounds.HalfWidthHeight.x;
             var currentX = startX;
-            var currentY = 2.0f;
+            var currentY = spawner.StartY;
         
             var brickCount = spawner.RowCount * bricksPerRow;
             using (var bricks = EntityManager.Instantiate(spawner.BrickPrefab, brickCount, Allocator.Temp))
