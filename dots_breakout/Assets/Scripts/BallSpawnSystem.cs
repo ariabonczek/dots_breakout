@@ -16,7 +16,7 @@ public class BallSpawnSystem : JobComponentSystem
             {
                 for (int i = 0; i < balls.Length; ++i)
                 {
-                    EntityManager.SetComponentData(balls[i], new BallVelocity
+                    EntityManager.SetComponentData(balls[i], new Velocity2D
                     {
                         Velocity = random.NextFloat2Direction()
                     });

@@ -4,7 +4,6 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Transforms;
 
 [AlwaysUpdateSystem]
 [UpdateAfter(typeof(MoveBallSystem))]
@@ -15,7 +14,7 @@ public class CollideBallSystem : JobComponentSystem
     private EntityQuery m_BrickQuery;
     
     [BurstCompile]
-    struct BounceBallsOffPaddleJob : IJobForEach<RectangleBounds, MovementSpeed, Position2D, BallVelocity>
+    struct CollideBallsWithPaddleJob : IJobForEach<RectangleBounds, MovementSpeed, Position2D, Velocity2D>
     {
         public Entity PaddleEntity;
         
@@ -30,7 +29,7 @@ public class CollideBallSystem : JobComponentSystem
             [ReadOnly]ref RectangleBounds ballBounds, 
             [ReadOnly]ref MovementSpeed speed,
             ref Position2D ballTranslation,
-            ref BallVelocity ballVelocity)
+            ref Velocity2D ballVelocity)
         {
             var ballPosition = ballTranslation.Value;
             var paddlePosition = PaddleTranslation[PaddleEntity].Value;
@@ -53,7 +52,7 @@ public class CollideBallSystem : JobComponentSystem
     }
 
     [BurstCompile]
-    struct CollideBallsWithBricksJob_Accelerated : IJobForEachWithEntity<RectangleBounds, MovementSpeed, Position2D, BallVelocity>
+    struct CollideBallsWithBricksJob_Accelerated : IJobForEachWithEntity<RectangleBounds, MovementSpeed, Position2D, Velocity2D>
     {
         public EntityCommandBuffer.Concurrent Ecb;
 
@@ -68,10 +67,10 @@ public class CollideBallSystem : JobComponentSystem
             [ReadOnly]ref RectangleBounds ballBounds, 
             [ReadOnly]ref MovementSpeed speed,
             [ReadOnly]ref Position2D ballTranslation,
-            ref BallVelocity ballVelocity)
+            ref Velocity2D velocity2D)
         {
             var ballPosition = ballTranslation.Value;
-            var velocity = ballVelocity.Velocity;
+            var velocity = velocity2D.Velocity;
 
             var invertX = false;
             var invertY = false;
@@ -119,14 +118,14 @@ public class CollideBallSystem : JobComponentSystem
             if (invertX)
                 velocity.x = -velocity.x;
 
-            ballVelocity.Velocity = velocity;
+            velocity2D.Velocity = velocity;
         }
     }
     
     protected override JobHandle OnUpdate(JobHandle inputDependencies)
     {
         var paddleEntity = GetSingletonEntity<PaddleTag>();
-        var paddleJob = new BounceBallsOffPaddleJob
+        var paddleJob = new CollideBallsWithPaddleJob
         {
             PaddleEntity = paddleEntity,
             

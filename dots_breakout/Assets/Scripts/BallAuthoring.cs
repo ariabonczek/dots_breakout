@@ -8,7 +8,7 @@ public struct RectangleBounds : IComponentData
     public float2 HalfWidthHeight;
 }
 
-public struct BallVelocity : IComponentData
+public struct Velocity2D : IComponentData
 {
     public float2 Velocity;
 }
@@ -34,7 +34,7 @@ public class BallAuthoring : MonoBehaviour, IConvertGameObjectToEntity
             Speed = MovementSpeed
         });
         
-        dstManager.AddComponent<BallVelocity>(entity);
+        dstManager.AddComponent<Velocity2D>(entity);
         
         dstManager.AddComponent<Position2D>(entity);
         dstManager.RemoveComponent<Translation>(entity);
